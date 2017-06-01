@@ -36,9 +36,9 @@ class IsbiEmStacksDataset(ThreadedDataset):
         For example, if split=0.85, 85\% of the images will be used for training,
         whereas 15\% will be used for validation.
     crossval: int 
-        If it is set to None, to cross-validation is used. An int specifying in how many folds we want to split our data.
+        An int specifying in how many folds we want to split the data. If None, no cross-validation is used.
     fold: int
-        An int specifying which fold we want. If fold=1, images from 0 to 5 will be used as validation. 
+        An int specifying which fold we want for validation. If fold=1, images from 0 to 5 will be used. 
         If fold=2, images from 6 to 11, and so on. 
      References
     ----------
