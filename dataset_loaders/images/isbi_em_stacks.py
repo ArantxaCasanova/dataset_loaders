@@ -33,13 +33,15 @@ class IsbiEmStacksDataset(ThreadedDataset):
         the set to be returned.
     split: float
         A float indicating the dataset split between training and validation.
-        For example, if split=0.85, 85\% of the images will be used for training,
-        whereas 15\% will be used for validation.
-    crossval: int 
-        An int specifying in how many folds we want to split the data. If None, no cross-validation is used.
+        For example, if split=0.85, 85\% of the images will be used
+        for training, whereas 15\% will be used for validation.
+    crossval: int
+         If it is set to None, to cross-validation is used. An int specifying
+         in how many folds we want to split our data.
     fold: int
-        An int specifying which fold we want for validation. If fold=1, images from 0 to 5 will be used. 
-        If fold=2, images from 6 to 11, and so on. 
+        An int specifying which fold we want. If fold=1, images from 0 to 5
+        will be used as validation. If fold=2, images from 6 to 11, and so on.
+
      References
     ----------
     .. [1] http://journal.frontiersin.org/article/10.3389/fnana.2015.00142/full
@@ -56,30 +58,31 @@ class IsbiEmStacksDataset(ThreadedDataset):
         1: (255, 255, 255)}  # Membranes
     _mask_labels = {0: 'Non-membranes', 1: 'Membranes'}
 
-    def __init__(self, which_set='train', split=0.80,crossval=5,fold=3, *args, **kwargs):
+    def __init__(self, which_set='train', split=0.60, crossval=5, fold=3,
+                 *args, **kwargs):
 
         assert which_set in ["train", "valid", "val", "test"]
         self.which_set = "val" if which_set == "valid" else which_set
 
         self.middle_fold = False  # False by default
-        if crossval is not None: # if cross-validation is used
+        if crossval is not None:  # if cross-validation is used
             # number of images per fold
             img_per_fold = int(30/crossval)
             # start and end index for validation fold
-            start=(fold-1)*img_per_fold
-            end=fold*img_per_fold
+            start = (fold-1)*img_per_fold
+            end = fold*img_per_fold
 
             if self.which_set == "train":
-                if fold==1: #if it is the first fold
+                if fold == 1:  # if it is the first fold
                     self.start = end
                     self.end = 30
-                elif fold==crossval: # if it is the last fold
-                    self.start=0
-                    self.end=start
-                else: # a fold in the middle of the dataset
-                    self.middle_fold=True
-                    self.start=start
-                    self.end=end
+                elif fold == crossval:  # if it is the last fold
+                    self.start = 0
+                    self.end = start
+                else:  # a fold in the middle of the dataset
+                    self.middle_fold = True
+                    self.start = start
+                    self.end = end
             elif self.which_set == "val":
                 self.start = start
                 self.end = end
@@ -87,7 +90,7 @@ class IsbiEmStacksDataset(ThreadedDataset):
                 self.start = 0
                 self.end = 30
 
-        else: # if no cross-validation is used
+        else:  # if no cross-validation is used
             if self.which_set == "train":
                 self.start = 0
                 self.end = int(split * 30)
@@ -112,10 +115,11 @@ class IsbiEmStacksDataset(ThreadedDataset):
 
     def get_names(self):
         """Return a dict of names, per prefix/subset."""
-        if  self.middle_fold: # if validation is a middle fold, concatenate separated train folds
-            return {'default': range(0,self.start)+range(self.end,30)}
+        if self.middle_fold:
+            # if validation is a middle fold, concatenate separated train folds
+            return {'default': range(0, self.start)+range(self.end, 30)}
         else:
-            return {'default': range(self.start,self.end)}
+            return {'default': range(self.start, self.end)}
 
     def load_sequence(self, sequence):
         """Load a sequence of images/frames
@@ -132,7 +136,6 @@ class IsbiEmStacksDataset(ThreadedDataset):
         F = []
 
         for prefix, idx in sequence:
-
             imgs = Image.open(self.image_path)
             imgs.seek(idx)
             imgs = np.array(imgs)[:, :, None].astype("uint8")
