@@ -58,7 +58,7 @@ class IsbiEmStacksDataset(ThreadedDataset):
         1: (255, 255, 255)}  # Membranes
     _mask_labels = {0: 'Non-membranes', 1: 'Membranes'}
 
-    def __init__(self, which_set='train', split=0.60, crossval=5, fold=3,
+    def __init__(self, which_set='train', split=0.60, crossval=5, fold=3, rand_perm=None,
                  *args, **kwargs):
 
         assert which_set in ["train", "valid", "val", "test"]
@@ -66,6 +66,10 @@ class IsbiEmStacksDataset(ThreadedDataset):
 
         self.middle_fold = False  # False by default
         if crossval is not None:  # if cross-validation is used
+            if rand_perm is not None:
+                self.rand_indexes=rand_perm
+            else:
+                self.rand_indexes=range(0,30)
             # number of images per fold
             img_per_fold = int(30/crossval)
             # start and end index for validation fold
@@ -115,11 +119,12 @@ class IsbiEmStacksDataset(ThreadedDataset):
 
     def get_names(self):
         """Return a dict of names, per prefix/subset."""
+
         if self.middle_fold:
             # if validation is a middle fold, concatenate separated train folds
-            return {'default': range(0, self.start)+range(self.end, 30)}
+            return {'default': self.rand_indexes[range(0, self.start)+range(self.end, 30)].tolist()}
         else:
-            return {'default': range(self.start, self.end)}
+            return {'default': self.rand_indexes[range(self.start, self.end)].tolist()}
 
     def load_sequence(self, sequence):
         """Load a sequence of images/frames
