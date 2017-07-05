@@ -210,9 +210,9 @@ def test():
 
     # Get number of classes
     nclasses = trainiter.nclasses
-    print ("N classes: " + str(nclasses))
+    print("N classes: " + str(nclasses))
     void_labels = trainiter.void_labels
-    print ("Void label: " + str(void_labels))
+    print("Void label: " + str(void_labels))
 
     # Training info
     train_nsamples = trainiter.nsamples
