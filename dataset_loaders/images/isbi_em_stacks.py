@@ -35,12 +35,18 @@ class IsbiEmStacksDataset(ThreadedDataset):
         A float indicating the dataset split between training and validation.
         For example, if split=0.85, 85\% of the images will be used
         for training, whereas 15\% will be used for validation.
-    crossval: int
-         If it is set to None, to cross-validation is used. An int specifying
-         in how many folds we want to split our data.
-    fold: int
-        An int specifying which fold we want. If fold=1, images from 0 to 5
-        will be used as validation. If fold=2, images from 6 to 11, and so on.
+        Will be ignored if crossval_nfolds is not None
+    crossval_nfolds: int or None
+        When None, cross-validation is disabled.
+        Else, represents the number of folds the data will be split into.
+    valid_fold: int
+        An int specifying which fold to use for validation.
+        If valid_fold=0, images from 0 to 5 will be used for validation.
+        If valid_fold=1, images from 6 to 11, and so on.
+    rand_perm: Numpy array or None
+        When a Numpy array with a random permutation is provided,
+        these random indices are used for the cross-validation.
+        When None, no random permutation is used.
 
      References
     ----------
@@ -58,43 +64,35 @@ class IsbiEmStacksDataset(ThreadedDataset):
         1: (255, 255, 255)}  # Membranes
     _mask_labels = {0: 'Non-membranes', 1: 'Membranes'}
 
-    def __init__(self, which_set='train', split=0.60, crossval=5, fold=3, rand_perm=None,
-                 *args, **kwargs):
+    def __init__(self, which_set='train', split=0.60, crossval_nfolds=5,
+                 valid_fold=3, rand_perm=None, *args, **kwargs):
 
         assert which_set in ["train", "valid", "val", "test"]
         self.which_set = "val" if which_set == "valid" else which_set
 
-        self.middle_fold = False  # False by default
-        if crossval is not None:  # if cross-validation is used
+        if crossval_nfolds is not None:
+            self.crossval = True
             if rand_perm is not None:
-                self.rand_indexes=rand_perm
+                self.rand_indices = rand_perm
             else:
-                self.rand_indexes=range(0,30)
+                self.rand_indices = np.array(range(30))
             # number of images per fold
-            img_per_fold = int(30/crossval)
-            # start and end index for validation fold
-            start = (fold-1)*img_per_fold
-            end = fold*img_per_fold
+            img_per_fold = int(30 / crossval_nfolds)
 
             if self.which_set == "train":
-                if fold == 1:  # if it is the first fold
-                    self.start = end
-                    self.end = 30
-                elif fold == crossval:  # if it is the last fold
-                    self.start = 0
-                    self.end = start
-                else:  # a fold in the middle of the dataset
-                    self.middle_fold = True
-                    self.start = start
-                    self.end = end
+                self.start_1 = 0
+                self.end_1 = valid_fold * img_per_fold
+                self.start_2 = (valid_fold + 1) * img_per_fold
+                self.end_2 = 30
             elif self.which_set == "val":
-                self.start = start
-                self.end = end
+                self.start_1 = valid_fold * img_per_fold
+                self.end_1 = self.start_2 = self.end_2 = \
+                    (valid_fold + 1) * img_per_fold
             elif self.which_set == "test":
-                self.start = 0
-                self.end = 30
+                raise ValueError('Cannot perform cross-validation on test.')
 
-        else:  # if no cross-validation is used
+        else:
+            self.crossval = False
             if self.which_set == "train":
                 self.start = 0
                 self.end = int(split * 30)
@@ -119,12 +117,13 @@ class IsbiEmStacksDataset(ThreadedDataset):
 
     def get_names(self):
         """Return a dict of names, per prefix/subset."""
-
-        if self.middle_fold:
-            # if validation is a middle fold, concatenate separated train folds
-            return {'default': self.rand_indexes[range(0, self.start)+range(self.end, 30)].tolist()}
+        if self.crossval:
+            return {'default': (
+                                  self.rand_indices[self.start_1:self.end_1]
+                              ).tolist() + (
+                self.rand_indices[self.start_2:self.end_2]).tolist()}
         else:
-            return {'default': self.rand_indexes[range(self.start, self.end)].tolist()}
+            return {'default': range(self.start, self.end)}
 
     def load_sequence(self, sequence):
         """Load a sequence of images/frames
